@@ -96,3 +96,110 @@
     expiry: uint, ;; KYC expiration block height
   }
 )
+
+;; Decentralized Governance Proposals
+;; Stores all governance proposals with voting mechanics
+(define-map proposals
+  { proposal-id: uint }
+  {
+    title: (string-ascii 256), ;; Proposal title/description
+    asset-id: uint, ;; Target asset for proposal
+    start-height: uint, ;; Voting start block
+    end-height: uint, ;; Voting end block
+    executed: bool, ;; Execution status
+    votes-for: uint, ;; Total votes in favor
+    votes-against: uint, ;; Total votes against
+    minimum-votes: uint, ;; Minimum participation threshold
+  }
+)
+
+;; Individual Vote Registry
+;; Records individual voting decisions and token commitment
+(define-map votes
+  {
+    proposal-id: uint,
+    voter: principal,
+  }
+  { vote-amount: uint }
+)
+
+;; Dividend Distribution Tracker
+;; Manages dividend claim history and prevents double-claiming
+(define-map dividend-claims
+  {
+    asset-id: uint,
+    claimer: principal,
+  }
+  { last-claimed-amount: uint }
+)
+
+;; Oracle Price Feed Integration
+;; External price data integration for asset valuation
+(define-map price-feeds
+  { asset-id: uint }
+  {
+    price: uint, ;; Current price in satoshis
+    decimals: uint, ;; Price precision decimals
+    last-updated: uint, ;; Last update block height
+    oracle: principal, ;; Authorized oracle address
+  }
+)
+
+;; INPUT VALIDATION & SECURITY FUNCTIONS
+
+;; Validates asset value within acceptable bounds
+(define-private (validate-asset-value (value uint))
+  (and
+    (>= value MIN-ASSET-VALUE)
+    (<= value MAX-ASSET-VALUE)
+  )
+)
+
+;; Validates governance proposal duration
+(define-private (validate-duration (duration uint))
+  (and
+    (>= duration MIN-DURATION)
+    (<= duration MAX-DURATION)
+  )
+)
+
+;; Validates KYC verification level
+(define-private (validate-kyc-level (level uint))
+  (<= level MAX-KYC-LEVEL)
+)
+
+;; Validates KYC expiry timeframe
+(define-private (validate-expiry (expiry uint))
+  (and
+    (> expiry stacks-block-height)
+    (<= (- expiry stacks-block-height) MAX-EXPIRY)
+  )
+)
+
+;; Validates minimum vote requirements for proposals
+(define-private (validate-minimum-votes (vote-count uint))
+  (and
+    (> vote-count u0)
+    (<= vote-count tokens-per-asset)
+  )
+)
+
+;; Validates metadata URI format and length
+(define-private (validate-metadata-uri (uri (string-ascii 256)))
+  (and
+    (> (len uri) u0)
+    (<= (len uri) u256)
+  )
+)
+
+;; UTILITY & HELPER FUNCTIONS
+
+;; Generates next available asset ID
+(define-private (get-next-asset-id)
+  (default-to u1 (get-last-asset-id))
+)
+
+;; Generates next available proposal ID
+(define-private (get-next-proposal-id)
+  (default-to u1 (get-last-proposal-id))
+)
